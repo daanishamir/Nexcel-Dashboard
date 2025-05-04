@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detailed Performance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="Chart.css">
+</head>
+
+<body>
+  <div class="table-container">
+    <div><h1 class="heading">Detailed Performance</h1>
+      
+      <div class="dropdown" style="display: flex; gap: 10px; align-items: center;">
+
+        <!-- Month Dropdown with Home Button -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          
+          <!-- Home Button with Icon -->
+          <button onclick="window.location.href='AAA.html'" class="home-button">
+            <span>Back</span>
+
+          </button>
+      
+          <!-- Month Selector -->
+          <div class="month-dropdown">
+            <select id="monthSelector" onchange="onMonthChange()">
+              <!-- Options will be populated by JS -->
+            </select>
+          </div>
+        </div>
+      
+        <!-- Team Dropdown -->
+        <div class="team-dropdown">
+          <select id="pageSelector" onchange="navigateToPage()">
+            <option selected disabled>Team</option>
+            <option value="AAA-Detailed-Performance.html">AAA</option>
+            <option value="FINAL-Detailed-Performance.html">FINAL</option>
+            <option value="PARK-Detailed-Performance.html">PARK</option>
+            <option value="GREEN-Detailed-Performance.html">GREEN</option>
+            <option value="DP-Detailed-Performance.html">DP</option>
+          </select>
+        </div>
+      </div>
+    <table id="performanceTable">
+      <thead>
+        <tr>
+          <th>#</th> <!-- New column added here -->
+          <th>Name</th>
+          <th><span>Total</span></th>
+          <th><span>AVG</span></th>
+          <th><span>Leave</span></th>
+          <th><span>Days on Zero</span></th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+          <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th>
+          <th>21</th><th>22</th><th>23</th><th>24</th><th>25</th><th>26</th><th>27</th><th>28</th><th>29</th><th>30</th><th>31</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr>
+          <td colspan="37" class="loading">Loading Agents Data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const SHEET_ID = '1agBmRpPSA3QnlfqWBgEe_5HUR5Y4Q695XDEwKKfmAso';
+    const SHEET_NAME = 'PARK-Monthly!A2:AK';
+    const API_KEY = 'AIzaSyDvY9b78JMeGlobtLm3VshDjIH67yypjvk';
+    
+    let currentMonth = "current";
+    let rowsData = [];
+    let currentSortColumn = 1; // default sort by Total
+    let ascending = false;
+  
+    const sortColumns = {
+      1: 'Total',
+      2: 'AVG',
+      3: 'Leave',
+      4: 'Days on Zero'
+    };
+  
+    function generateMonthOptions() {
+  const today = new Date();
+  const months = [{ label: "This Month", value: "current" }];
+
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1); // fix: no +1
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+    months.push({ label, value });
+  }
+
+  const monthSelector = document.getElementById("monthSelector");
+  monthSelector.innerHTML = "";
+  months.forEach(month => {
+    const option = document.createElement("option");
+    option.value = month.value;
+    option.textContent = month.label;
+    monthSelector.appendChild(option);
+  });
+}
+
+  
+    async function fetchSheetData() {
+      try {
+        if (currentMonth === "current") {
+          const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          rowsData = data.values || [];
+        } else {
+          const fileName = `sales-${currentMonth}.json`;
+          const url = `https://raw.githubusercontent.com/daanishamir/PARK-Sales-Data/main/${fileName}`;
+          const response = await fetch(url);
+          const json = await response.json();
+          rowsData = convertGithubJSON(json.agents);
+        }
+  
+        renderTable();
+  
+        if (currentMonth === "current") {
+          setTimeout(fetchSheetData, 60000); // auto-refresh for live month
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        document.getElementById('tableBody').innerHTML = `
+          <tr>
+            <td colspan="37" style="color: red;">Error loading data. Please check internet or file name.</td>
+          </tr>
+        `;
+      }
+    }
+  
+    function convertGithubJSON(agents) {
+      return agents.map(agent => {
+        const row = [];
+        row[0] = agent.name;
+        row[1] = agent.total_sales;
+        row[2] = agent.avg_sales;
+        row[3] = agent.working_days;
+        row[4] = agent.days_on_zero;
+        const daily = agent.daily_sales.map(v => v === null ? '' : v);
+        return row.concat(daily);
+      });
+    }
+  
+    function onMonthChange() {
+      const selector = document.getElementById('monthSelector');
+      currentMonth = selector.value;
+      fetchSheetData();
+    }
+  
+    function renderTable() {
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+  
+      if (rowsData.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="37" style="color: red;">No data available.</td>
+          </tr>
+        `;
+        return;
+      }
+  
+      rowsData.sort((a, b) => {
+        const aVal = parseFloat(a[currentSortColumn] || '0');
+        const bVal = parseFloat(b[currentSortColumn] || '0');
+        return ascending ? aVal - bVal : bVal - aVal;
+      });
+  
+      function getRankText(rank) {
+        if (rank === 1) return '1st';
+        if (rank === 2) return '2nd';
+        if (rank === 3) return '3rd';
+        return `${rank}`;
+      }
+  
+      let rank = 1;
+      rowsData.forEach((row) => {
+        const agentName = row[0]?.trim();
+        if (!agentName) return;
+  
+        const tr = document.createElement('tr');
+  
+        const rankTd = document.createElement('td');
+        rankTd.textContent = getRankText(rank++);
+        rankTd.classList.add('rank-cell');
+        if (rank <= 4) rankTd.classList.add('yellow-cell');
+        tr.appendChild(rankTd);
+  
+        row.forEach((cell, colIndex) => {
+          const td = document.createElement('td');
+  
+          if (colIndex === 0) {
+            const link = document.createElement('a');
+            link.href = `ENERGY-Agent-Details.html?name=${encodeURIComponent(agentName)}`;
+            link.target = '_blank';
+            link.textContent = agentName;
+            link.classList.add('name-link');
+            td.appendChild(link);
+            td.classList.add('name-cell');
+          }else {
+                td.textContent = (cell !== undefined && cell !== null && cell !== '') ? cell : '';
+  
+                 if (colIndex === 1) td.classList.add('total-cell');
+                 else if (colIndex === 2 || colIndex === 3 || colIndex === 4) td.classList.add('dark-red-cell');
+
+              if (cell === 'A') td.classList.add('absent-cell');
+               else if (cell === '0' || cell === 0) td.classList.add('zero-cell');
+               else if (cell === '') td.classList.add('empty-cell');
+
+  
+            if (colIndex === currentSortColumn) {
+              td.classList.add('highlight-sort');
+            }
+          }
+  
+          tr.appendChild(td);
+        });
+  
+        tableBody.appendChild(tr);
+      });
+  
+      highlightHeader();
+    }
+  
+    function highlightHeader() {
+      document.querySelectorAll('thead th').forEach((th, idx) => {
+        const span = th.querySelector('span');
+        if (!span) return;
+  
+        if (idx - 1 === currentSortColumn) {
+          th.classList.add('highlight-header');
+          const arrow = ascending ? '▲' : '▼';
+          span.textContent = `${sortColumns[currentSortColumn]} ${arrow}`;
+        } else {
+          th.classList.remove('highlight-header');
+          span.textContent = sortColumns[idx - 1] || '';
+        }
+      });
+    }
+  
+    function navigateToPage() {
+      const selector = document.getElementById('pageSelector');
+      const selectedPage = selector.value;
+      if (selectedPage) {
+        window.location.href = selectedPage;
+      }
+    }
+  
+    document.addEventListener("DOMContentLoaded", () => {
+      generateMonthOptions();
+      fetchSheetData();
+  
+      document.getElementById('monthSelector').addEventListener('change', onMonthChange);
+  
+      const headers = document.querySelectorAll('th');
+      headers.forEach((th, index) => {
+        if (sortColumns[index - 1] !== undefined) {
+          th.style.cursor = 'pointer';
+          th.addEventListener('click', () => {
+            if (currentSortColumn === index - 1) {
+              ascending = !ascending;
+            } else {
+              currentSortColumn = index - 1;
+              ascending = false;
+            }
+            renderTable();
+          });
+        }
+      });
+  
+      document.getElementById('pageSelector').value = "PARK-Detailed-Performance.html";
+    });
+  </script>
+    
+    <h1 class="footer">Created and Designed by daanishamir</h1>
+</body>  

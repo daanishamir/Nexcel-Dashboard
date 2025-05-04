@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Top Agent Performance</title>
+  <link rel="stylesheet" href="Dashboard.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container hidden">
+    <div><h1 class="heading">TOP PERFORMER</h1></div>
+    <div class="dropdown">
+      <select id="pageSelector" onchange="navigateToPage()">
+        <option selected disabled>Team</option>
+        <option value="AAA.html">AAA</option>
+        <option value="FINAL.html">FINAL</option>
+        <option value="ENERGY.html">PARK/DP/GREEN</option>
+      </select>
+    </div>
+    <!-- First Position (Gold Card) -->
+    <div class="card gold">
+      <span class="number">01</span>
+      <div class="agent-name-tag">
+        <span class="first-name"></span>
+        <span class="last-name"></span>
+      </div>
+      <img src="" alt="Agent Image" class="center-image" />
+      <div class="metrics-grid">
+        <div class="metric-pair">
+          <div class="metric-box">
+            <div class="metric-label">SALES</div>
+            <div class="metric-value"></div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">LEAVES</div>
+            <div class="metric-value"></div>
+          </div>
+        </div>
+        <div class="metric-pair">
+          <div class="metric-box">
+            <div class="metric-label">AVG</div>
+            <div class="metric-value"></div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">QA ISSUE</div>
+            <div class="metric-value"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Second and Third Row -->
+    <div class="second-third-row">
+      <div class="card silver">
+        <span class="number2">02</span>
+        <div class="agent-name-tag">
+          <span class="first-name"></span>
+          <span class="last-name"></span>
+        </div>
+        <img src="" alt="Ali Image" class="side-image" />
+        <div class="card-metrics">
+          <div class="metric-box">
+            <div class="metric-label">SALES</div>
+            <div class="metric-value"></div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">LEAVES</div>
+            <div class="metric-value"></div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">AVG</div>
+            <div class="metric-value"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bronze">
+        <span class="number2">03</span>
+        <div class="agent-name-tag">
+          <span class="first-name"></span>
+          <span class="last-name"></span>
+        </div>
+        <img src="" alt="Waqas Image" class="side-image" />
+        <div class="card-metrics">
+          <div class="metric-box">
+            <div class="metric-label">SALES</div>
+            <div class="metric-value"></div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">LEAVES</div>
+            <div class="metric-value"></div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">AVG</div>
+            <div class="metric-value"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Button -->
+    <a href="AAA-Detailed-Performance.html" target="_blank" class="btn">View Detailed Performance</a>
+  </div>
+
+  <h1 class="footer">Created and Designed by daanishamir</h1>
+
+  <script>
+    const sheetId = '1agBmRpPSA3QnlfqWBgEe_5HUR5Y4Q695XDEwKKfmAso';
+    const sheetName = 'AAA-Monthly';
+    const apiKey = 'AIzaSyDvY9b78JMeGlobtLm3VshDjIH67yypjvk';
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}?key=${apiKey}`;
+  
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.values;
+        if (!rows || rows.length < 2) throw new Error("Sheet has no data");
+  
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+        const agents = rows.slice(1).map(row => {
+          const obj = {};
+          headers.forEach((key, i) => {
+            obj[key] = row[i] ? row[i].trim() : '';
+          });
+          return obj;
+        });
+  
+        const topAgents = agents
+          .filter(agent => agent['total'])
+          .sort((a, b) => parseFloat(b['total']) - parseFloat(a['total']))
+          .slice(0, 3);
+  
+        const cardClasses = ['gold', 'silver', 'bronze'];
+  
+        topAgents.forEach((agent, index) => {
+          const card = document.querySelector(`.${cardClasses[index]}`);
+          if (!card) return;
+  
+          const fullName = agent['name'] || '';
+          const [firstName, ...lastNameParts] = fullName.trim().split(/\s+/);
+          const lastName = lastNameParts.join(' ');
+  
+          // Set name
+          card.querySelector('.first-name').textContent = firstName || '';
+          card.querySelector('.last-name').textContent = lastName || '';
+  
+          // Load image
+          const img = card.querySelector('img');
+          const safeName = fullName.replace(/\s+/g, ' ').trim();
+          const imagePath = `./image/${safeName}.png`;
+          img.src = imagePath;
+
+          // Prevent infinite loop by checking if already set to default
+          img.onerror = () => {
+          img.style.display = 'none'; // Hide the image if it fails to load
+          };
+
+
+  
+          // Set metrics
+          const metrics = card.querySelectorAll('.metric-value');
+          if (metrics.length >= 3) {
+            metrics[0].textContent = agent['total'] || '0';
+            metrics[1].textContent = agent['lv'] || '0';
+            metrics[2].textContent = agent['avg'] || '0';
+            if (metrics[3]) metrics[3].textContent = agent['qa issue'] || '0';
+          }
+        });
+  
+        // SHOW container after data loads
+        document.querySelector('.container').classList.remove('hidden');
+      })
+      .catch(err => {
+        console.error('Error loading data:', err);
+        alert('Could not load data from sheet. Please check console.');
+      });
+
+      function navigateToPage() {
+  const selector = document.getElementById('pageSelector');
+  const selectedPage = selector.value;
+  if (selectedPage) {
+    window.location.href = selectedPage; // navigate in the same tab
+  }
+}
+// Pre-select current page value in dropdown
+document.addEventListener("DOMContentLoaded", () => {
+  const selector = document.getElementById('pageSelector');
+  selector.value = "AAA.html"; // Change this value based on the page
+});
+
+
+  </script>
+  
+</body>
+</html>

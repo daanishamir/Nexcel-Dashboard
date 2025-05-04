@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detailed Performance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="Chart.css">
+</head>
+
+<body>
+  <div class="table-container">
+    <div><h1 class="heading">Detailed Performance</h1>
+      <div class="dropdown">
+        <select id="pageSelector" onchange="navigateToPage()">
+          <option selected disabled>Team</option>
+          <option value="AAA-Detailed-Performance.html">AAA</option>
+          <option value="FINAL-Detailed-Performance.html">FINAL</option>
+          <option value="PARK-Detailed-Performance.html">PARK</option>
+          <option value="GREEN-Detailed-Performance.html">GREEN</option>
+          <option value="DP-Detailed-Performance.html">DP</option>
+        </select>
+      </div>
+    </div>
+    <table id="performanceTable">
+      <thead>
+        <tr>
+          <th>#</th> <!-- New column added here -->
+          <th>Name</th>
+          <th><span>Total</span></th>
+          <th><span>AVG</span></th>
+          <th><span>Leave</span></th>
+          <th><span>Days on Zero</span></th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+          <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th>
+          <th>21</th><th>22</th><th>23</th><th>24</th><th>25</th><th>26</th><th>27</th><th>28</th><th>29</th><th>30</th><th>31</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr>
+          <td colspan="37" class="loading">Loading Agents Data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const SHEET_ID = '1agBmRpPSA3QnlfqWBgEe_5HUR5Y4Q695XDEwKKfmAso';
+    const SHEET_NAME = 'GREEN-Monthly!A2:AK';
+    const API_KEY = 'AIzaSyDvY9b78JMeGlobtLm3VshDjIH67yypjvk';
+    
+    let rowsData = [];
+    let currentSortColumn = 1; // default sort by 'Total' (index 1)
+    let ascending = false; // default sort descending
+    
+    const sortColumns = {
+      1: 'Total',
+      2: 'AVG',
+      3: 'Leave',
+      4: 'Days on Zero'
+    };
+    
+    async function fetchSheetData() {
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        rowsData = data.values || [];
+        renderTable();
+        setTimeout(fetchSheetData, 5000); // Auto refresh every 5 sec
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        document.getElementById('tableBody').innerHTML = `
+          <tr>
+            <td colspan="37" style="color: red;">Error loading data. Please check internet.</td>
+          </tr>
+        `;
+      }
+    }
+    
+    function renderTable() {
+  const tableBody = document.getElementById('tableBody');
+  tableBody.innerHTML = '';
+
+  if (rowsData.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="37" style="color: red;">No data available in the sheet.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Sort based on currentSortColumn
+  rowsData.sort((a, b) => {
+    const aVal = parseFloat(a[currentSortColumn] || '0');
+    const bVal = parseFloat(b[currentSortColumn] || '0');
+    return ascending ? aVal - bVal : bVal - aVal;
+  });
+
+  function getRankText(rank) {
+    if (rank === 1) return '1st';
+    if (rank === 2) return '2nd';
+    if (rank === 3) return '3rd';
+    return `${rank}`;
+  }
+
+  let rank = 1;
+  rowsData.forEach((row) => {
+    const agentName = row[0]?.trim();
+    if (!agentName) return; // Skip rows without name
+
+    const tr = document.createElement('tr');
+
+    const rankTd = document.createElement('td');
+    rankTd.textContent = getRankText(rank++);
+    rankTd.classList.add('rank-cell');
+    if (rank <= 4) rankTd.classList.add('yellow-cell'); // Highlight top 3
+    tr.appendChild(rankTd);
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement('td');
+
+      if (colIndex === 0) {
+        const link = document.createElement('a');
+        link.href = `Energy-Agent-Details.html?name=${encodeURIComponent(agentName)}`;
+        link.target = '_blank';
+        link.textContent = agentName;
+        link.classList.add('name-link');
+        td.appendChild(link);
+        td.classList.add('name-cell');
+      } else {
+        td.textContent = cell || '';
+        if (colIndex === 1) td.classList.add('total-cell');
+        else if (colIndex === 2 || colIndex === 3 || colIndex === 4) td.classList.add('dark-red-cell');
+        else if (cell === 'A') td.classList.add('absent-cell');
+        else if (cell === '0') td.classList.add('zero-cell');
+        else if (cell === '') td.classList.add('empty-cell');
+
+        if (colIndex === currentSortColumn) {
+          td.classList.add('highlight-sort');
+        }
+      }
+
+      tr.appendChild(td);
+    });
+
+    tableBody.appendChild(tr);
+  });
+
+  highlightHeader();
+}
+    
+    function highlightHeader() {
+  document.querySelectorAll('thead th').forEach((th, idx) => {
+    const span = th.querySelector('span');
+    if (!span) return; // skip Rank and other non-sortable headers
+
+    if (idx - 1 === currentSortColumn) { 
+      th.classList.add('highlight-header');
+      const arrow = ascending ? '▲' : '▼';
+      span.textContent = `${sortColumns[currentSortColumn]} ${arrow}`;
+    } else {
+      th.classList.remove('highlight-header');
+      span.textContent = sortColumns[idx - 1] || '';
+    }
+  });
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchSheetData();
+    
+      const headers = document.querySelectorAll('th');
+      headers.forEach((th, index) => {
+        if (sortColumns[index - 1] !== undefined) {
+          th.style.cursor = 'pointer';
+          th.addEventListener('click', () => {
+            if (currentSortColumn === index - 1) {
+              ascending = !ascending; // toggle ascending/descending if clicking same column
+            } else {
+              currentSortColumn = index - 1;
+              ascending = false; // default to descending on new column
+            }
+            renderTable();
+          });
+        }
+      });
+    });
+
+    function navigateToPage() {
+  const selector = document.getElementById('pageSelector');
+  const selectedPage = selector.value;
+  if (selectedPage) {
+    window.location.href = selectedPage; // navigate in the same tab
+  }
+}
+// Pre-select current page value in dropdown
+document.addEventListener("DOMContentLoaded", () => {
+  const selector = document.getElementById('pageSelector');
+  selector.value = "GREEN-Detailed-Performance.html"; // Change this value based on the page
+});
+
+    </script>
+    
+    <h1 class="footer">Created and Designed by daanishamir</h1>
+</body>  
